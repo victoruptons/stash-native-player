@@ -8,6 +8,8 @@ The app and the plugin share one version number.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-22
+
 ### Added
 
 - macOS: trackpad swipes go back / forward between pages, following System
