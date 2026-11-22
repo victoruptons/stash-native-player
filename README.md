@@ -63,7 +63,7 @@ without it.
 ### 2. App (on the computer you watch on)
 
 Download the zip for your system from the
-[latest release](https://github.com/victoruptons/stash-native-player/releases/latest) (or from a GitHub Actions run):
+[latest release](https://github.com/victoruptons/stash-native-player/releases/latest):
 
 - **Windows:** `StashNativePlayer-windows-x64.zip`. Unzip it and run
   `StashNativePlayer.exe`.

@@ -1,15 +1,14 @@
 name: build
 
-# Every push to main and every pull request builds Windows + macOS + the plugin.
-# Pushing a version tag (vX.Y.Z, matching the version in app/CMakeLists.txt)
-# also publishes a GitHub release with those builds attached and the matching
+# Runs only when a version tag is pushed (vX.Y.Z, matching the versions in
+# app/CMakeLists.txt and the plugin's .yml): builds Windows + macOS + the
+# plugin and publishes a GitHub release with them attached and the matching
 # CHANGELOG.md section as release notes. See "Releasing" in README.md.
+# "Run workflow" on the Actions tab builds without releasing.
 
 on:
   push:
-    branches: [main]
     tags: ["v*"]
-  pull_request:
   workflow_dispatch:
 
 permissions:
