@@ -21,7 +21,7 @@ if(NOT MPV_INCLUDE_DIR)
         if(NOT EXISTS "${_mpv_hdr_dir}/mpv/${_h}")
             message(STATUS "Downloading mpv header ${_h} (${MPV_HEADERS_VERSION})")
             file(DOWNLOAD
-                "https://raw.githubusercontent.com/mpv-player/mpv/${MPV_HEADERS_VERSION}/include/mpv/${_h}"
+                "https://raw.githubusercontent.com/mpv-player/mpv/${MPV_HEADERS_VERSION}/libmpv/${_h}"
                 "${_mpv_hdr_dir}/mpv/${_h}"
                 STATUS _st TLS_VERIFY ON)
             list(GET _st 0 _code)
