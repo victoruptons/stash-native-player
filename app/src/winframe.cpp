@@ -125,7 +125,7 @@ private:
 
 } // namespace
 
-void installSnapFrame(QWindow *window)
+void installWindowFrame(QWindow *window)
 {
     if (!window || qEnvironmentVariableIsSet("SNP_NO_SNAP_FRAME"))
         return;
@@ -146,8 +146,8 @@ void installSnapFrame(QWindow *window)
     });
 }
 
-#else
+#elif !defined(Q_OS_MACOS)
 
-void installSnapFrame(QWindow *) {}
+void installWindowFrame(QWindow *) {}
 
 #endif

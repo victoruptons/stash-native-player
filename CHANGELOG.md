@@ -8,6 +8,12 @@ The app and the plugin share one version number.
 
 ## [Unreleased]
 
+### Fixed
+
+- macOS: the window uses the standard traffic-light buttons on the left
+  (over a transparent title bar) instead of Windows-style buttons, and Chinese
+  text uses PingFang TC.
+
 ## [0.1.0] - 2026-11-22
 
 First release.

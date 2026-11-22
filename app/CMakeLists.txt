@@ -47,6 +47,12 @@ qt_add_executable(StashNativePlayer WIN32 MACOSX_BUNDLE
     src/screenocr.cpp src/screenocr.h
     resources.qrc
 )
+if(APPLE)
+    # native title bar with traffic lights over the toolbar (winframe_mac.mm)
+    enable_language(OBJCXX)
+    target_sources(StashNativePlayer PRIVATE src/winframe_mac.mm)
+    target_link_libraries(StashNativePlayer PRIVATE "-framework AppKit")
+endif()
 if(WIN32)
     target_sources(StashNativePlayer PRIVATE app.rc)
     # Windows OCR (screenocr.cpp, C++/WinRT from the Windows SDK)

@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     engine.load(qmlOverride.isEmpty() ? QUrl(QStringLiteral("qrc:/qml/Main.qml")) : QUrl::fromLocalFile(qmlOverride));
     if (engine.rootObjects().isEmpty())
         return 1;
-    installSnapFrame(qobject_cast<QWindow *>(engine.rootObjects().first()));
+    installWindowFrame(qobject_cast<QWindow *>(engine.rootObjects().first()));
 
     return app.exec();
 }

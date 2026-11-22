@@ -16,10 +16,13 @@ ApplicationWindow {
     visible: true
     color: "#000000"
     title: web.title ? web.title : "Stash"
-    // No native title bar: the toolbar below doubles as one (drag to move,
-    // double-click to maximize, window buttons on the right).
-    flags: Qt.Window | Qt.FramelessWindowHint
-    font.family: "Microsoft JhengHei UI"
+    // The toolbar below doubles as the title bar (drag to move, double-click
+    // to maximize). Windows: no native title bar, our own window buttons on
+    // the right. macOS: the native frame with its traffic-light buttons on
+    // the left, over the toolbar (see winframe_mac.mm).
+    readonly property bool mac: Qt.platform.os === "osx"
+    flags: mac ? Qt.Window : Qt.Window | Qt.FramelessWindowHint
+    font.family: mac ? "PingFang TC" : "Microsoft JhengHei UI"
 
     readonly property bool maximized: visibility === Window.Maximized
     readonly property bool fullScreen: visibility === Window.FullScreen
@@ -74,7 +77,9 @@ ApplicationWindow {
     Rectangle {
         id: toolbar
         anchors { left: parent.left; right: parent.right; top: parent.top }
-        height: visible ? 34 : 0
+        // macOS: about the height of a standard title bar, so the traffic
+        // lights sit centred in it
+        height: visible ? (win.mac ? 30 : 34) : 0
         visible: !win.fullScreen
         color: "#182026"
         z: 10
@@ -98,8 +103,8 @@ ApplicationWindow {
 
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 4
-            anchors.rightMargin: 0
+            anchors.leftMargin: win.mac ? 78 : 4 // macOS: room for the traffic lights
+            anchors.rightMargin: win.mac ? 6 : 0
             spacing: 2
 
             ToolBtn { text: "←"; visible: !win.setupVisible; enabled: web.canGoBack; onClicked: web.goBack(); ToolTip.text: "Back (Alt+Left)" }
@@ -208,9 +213,11 @@ ApplicationWindow {
                 }
             }
 
-            Item { implicitWidth: 8 }
+            Item { implicitWidth: 8; visible: !win.mac }
 
+            // Windows only: macOS has its own buttons on the left
             component WinBtn: ToolButton {
+                visible: !win.mac
                 implicitWidth: 44
                 implicitHeight: 34
                 font.pixelSize: 14
