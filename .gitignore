@@ -6,3 +6,5 @@ mpv-dev/
 .idea/
 *.7z
 *.log
+build-tests/
+__pycache__/

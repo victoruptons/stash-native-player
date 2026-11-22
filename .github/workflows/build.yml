@@ -1,15 +1,17 @@
 name: build
 
-# Runs only when a version tag is pushed (vX.Y.Z, matching the versions in
-# app/CMakeLists.txt and the plugin's .yml): builds Windows + macOS + the
-# plugin and publishes a GitHub release with them attached and the matching
-# CHANGELOG.md section as release notes. See "Releasing" in README.md.
-# "Run workflow" on the Actions tab builds without releasing.
+# Shared build used by ci.yml (every push / pull request) and release.yml
+# (version tags). Builds the app on Windows and macOS, runs the unit tests,
+# checks and tests the plugin; with `package: true` it also packages the
+# app and plugin as zips and uploads them as artifacts.
 
 on:
-  push:
-    tags: ["v*"]
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      package:
+        description: Package the app and plugin and upload the zips
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,8 +33,10 @@ jobs:
       - name: Set up MSVC
         uses: ilammy/msvc-dev-cmd@v1
 
-      # libmpv (DLL + headers) from shinchiro's Windows builds of mpv
+      # libmpv (DLL + headers) from shinchiro's Windows builds of mpv. Without
+      # packaging, CMake downloads just the headers instead.
       - name: Download libmpv
+        if: inputs.package
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -46,12 +50,18 @@ jobs:
           7z x mpv-dev.7z -ompv-dev | Out-Null
 
       - name: Configure
-        run: cmake -S app -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMPV_INCLUDE_DIR="${{ github.workspace }}/mpv-dev/include"
+        run: >
+          cmake -S app -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSNP_BUILD_TESTS=ON
+          ${{ inputs.package && format('-DMPV_INCLUDE_DIR="{0}/mpv-dev/include"', github.workspace) || '' }}
 
       - name: Build
         run: cmake --build build
 
+      - name: Unit tests
+        run: ctest --test-dir build --output-on-failure
+
       - name: Package
+        if: inputs.package
         shell: pwsh
         run: |
           $dist = "dist/StashNativePlayer"
@@ -65,6 +75,7 @@ jobs:
           Compress-Archive -Path $dist -DestinationPath dist/StashNativePlayer-windows-x64.zip
 
       - uses: actions/upload-artifact@v4
+        if: inputs.package
         with:
           name: StashNativePlayer-windows-x64
           path: dist/StashNativePlayer-windows-x64.zip
@@ -83,21 +94,25 @@ jobs:
           modules: qtwebengine qtwebchannel qtpositioning
           cache: true
 
-      # libmpv (+ headers) and its dependencies from Homebrew; dylibbundler
-      # copies them into the app bundle.
-      - name: Install libmpv
-        run: brew install ninja mpv dylibbundler
+      # libmpv and its dependencies from Homebrew, bundled into the app by
+      # dylibbundler. Without packaging, CMake downloads just the headers.
+      - name: Install build tools
+        run: brew install ninja ${{ inputs.package && 'mpv dylibbundler' || '' }}
 
       - name: Configure
         run: >
-          cmake -S app -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake -S app -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSNP_BUILD_TESTS=ON
           -DCMAKE_OSX_ARCHITECTURES=arm64
-          -DMPV_INCLUDE_DIR="$(brew --prefix)/include"
+          ${{ inputs.package && '-DMPV_INCLUDE_DIR="$(brew --prefix)/include"' || '' }}
 
       - name: Build
         run: cmake --build build
 
+      - name: Unit tests
+        run: ctest --test-dir build --output-on-failure
+
       - name: Package
+        if: inputs.package
         run: |
           set -euo pipefail
           app=build/StashNativePlayer.app
@@ -119,6 +134,7 @@ jobs:
           ditto -c -k --keepParent "$app" dist/StashNativePlayer-macos-arm64.zip
 
       - uses: actions/upload-artifact@v4
+        if: inputs.package
         with:
           name: StashNativePlayer-macos-arm64
           path: dist/StashNativePlayer-macos-arm64.zip
@@ -132,61 +148,14 @@ jobs:
         run: |
           node --check plugin/StashNativePlayer/native-player.js
           python3 -m py_compile plugin/StashNativePlayer/snp_captions.py
+      - name: Plugin tests
+        run: python3 -m unittest discover -s plugin/tests -v
       - name: Zip plugin
+        if: inputs.package
         run: cd plugin && zip -r ../StashNativePlayer-plugin.zip StashNativePlayer -x '*/__pycache__/*'
       - uses: actions/upload-artifact@v4
+        if: inputs.package
         with:
           name: StashNativePlayer-plugin
           path: StashNativePlayer-plugin.zip
           compression-level: 0
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows, macos, plugin]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check version and extract release notes
-        id: notes
-        run: |
-          set -euo pipefail
-          tag="${GITHUB_REF_NAME}"                 # e.g. v1.2.3 or v1.2.3-beta.1
-          version="${tag#v}"
-          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::Tag $tag is not a semantic version (vMAJOR.MINOR.PATCH[-prerelease])"; exit 1
-          fi
-          core="${version%%-*}"
-          cmake_version=$(sed -nE 's/^project\(StashNativePlayer VERSION ([0-9.]+).*/\1/p' app/CMakeLists.txt)
-          plugin_version=$(sed -nE 's/^version: *([0-9.]+).*/\1/p' plugin/StashNativePlayer/StashNativePlayer.yml)
-          if [ "$core" != "$cmake_version" ] || [ "$core" != "$plugin_version" ]; then
-            echo "::error::Tag $tag does not match app/CMakeLists.txt ($cmake_version) and StashNativePlayer.yml ($plugin_version)"; exit 1
-          fi
-          # the "## [x.y.z]" section of CHANGELOG.md, up to the next "## [" heading
-          awk -v v="$core" '
-            index($0, "## [" v "]") == 1 { on = 1; next }
-            on && /^## \[/ { exit }
-            on { print }
-          ' CHANGELOG.md > notes.md
-          if ! grep -q '[^[:space:]]' notes.md; then
-            echo "::error::CHANGELOG.md has no section for [$core]"; exit 1
-          fi
-          if [[ "$version" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
-
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ github.ref_name }}
-          body_path: notes.md
-          prerelease: ${{ steps.notes.outputs.prerelease }}
-          files: |
-            artifacts/StashNativePlayer-windows-x64.zip
-            artifacts/StashNativePlayer-macos-arm64.zip
-            artifacts/StashNativePlayer-plugin.zip
-          fail_on_unmatched_files: true

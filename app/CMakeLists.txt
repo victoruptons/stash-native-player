@@ -71,3 +71,18 @@ set_target_properties(StashNativePlayer PROPERTIES
 )
 
 install(TARGETS StashNativePlayer BUNDLE DESTINATION . RUNTIME DESTINATION .)
+
+# --- unit tests (-DSNP_BUILD_TESTS=ON, then ctest) --------------------------------
+option(SNP_BUILD_TESTS "Build the unit tests" OFF)
+if(SNP_BUILD_TESTS)
+    enable_testing()
+    find_package(Qt6 REQUIRED COMPONENTS Test)
+    qt_add_executable(tst_subtitlecore
+        tests/tst_subtitlecore.cpp
+        src/subtitlecore.cpp src/subtitlecore.h
+    )
+    set_target_properties(tst_subtitlecore PROPERTIES WIN32_EXECUTABLE OFF MACOSX_BUNDLE OFF)
+    target_include_directories(tst_subtitlecore PRIVATE src)
+    target_link_libraries(tst_subtitlecore PRIVATE Qt6::Core Qt6::Test)
+    add_test(NAME subtitlecore COMMAND tst_subtitlecore)
+endif()

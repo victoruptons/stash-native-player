@@ -1,0 +1,23 @@
+name: ci
+
+# Every push to main and every pull request: build on Windows and macOS and
+# run the unit tests (app and plugin). Nothing is packaged or released.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      package: false

@@ -1,0 +1,81 @@
+name: release
+
+# Pushing a version tag (vX.Y.Z, matching the versions in app/CMakeLists.txt
+# and plugin/StashNativePlayer/StashNativePlayer.yml) builds, tests and
+# packages Windows + macOS + the plugin, then publishes a GitHub release with
+# the zips attached and the matching CHANGELOG.md section as release notes.
+# A tag like vX.Y.Z-beta.1 becomes a pre-release. See "Releasing" in README.md.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.notes.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check version and extract release notes
+        id: notes
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"                 # e.g. v1.2.3 or v1.2.3-beta.1
+          version="${tag#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag $tag is not a semantic version (vMAJOR.MINOR.PATCH[-prerelease])"; exit 1
+          fi
+          core="${version%%-*}"
+          cmake_version=$(sed -nE 's/^project\(StashNativePlayer VERSION ([0-9.]+).*/\1/p' app/CMakeLists.txt)
+          plugin_version=$(sed -nE 's/^version: *([0-9.]+).*/\1/p' plugin/StashNativePlayer/StashNativePlayer.yml)
+          if [ "$core" != "$cmake_version" ] || [ "$core" != "$plugin_version" ]; then
+            echo "::error::Tag $tag does not match app/CMakeLists.txt ($cmake_version) and StashNativePlayer.yml ($plugin_version)"; exit 1
+          fi
+          # the "## [x.y.z]" section of CHANGELOG.md, up to the next "## [" heading
+          awk -v v="$core" '
+            index($0, "## [" v "]") == 1 { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::CHANGELOG.md has no section for [$core]"; exit 1
+          fi
+          if [[ "$version" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: notes.md
+
+  build:
+    needs: check
+    uses: ./.github/workflows/build.yml
+    with:
+      package: true
+
+  publish:
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body_path: artifacts/notes.md
+          prerelease: ${{ needs.check.outputs.prerelease }}
+          files: |
+            artifacts/StashNativePlayer-windows-x64.zip
+            artifacts/StashNativePlayer-macos-arm64.zip
+            artifacts/StashNativePlayer-plugin.zip
+          fail_on_unmatched_files: true

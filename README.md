@@ -257,6 +257,18 @@ dylibs are bundled into the `.app`.
 Linux (for development): install Qt 6 WebEngine dev packages and `libmpv-dev`,
 then `cmake -S app -B build && cmake --build build`.
 
+### Tests
+
+- App: add `-DSNP_BUILD_TESTS=ON` when configuring, build, then run
+  `ctest --test-dir build --output-on-failure` (on Windows, with Qt's `bin`
+  folder on `PATH`). Covers the subtitle code in `app/src/subtitlecore.cpp`.
+- Plugin: `python -m unittest discover -s plugin/tests -v` (Stash is faked;
+  covers `snp_captions.py`).
+
+GitHub Actions has two workflows. **ci** builds Windows and macOS and runs both
+test suites on every push to `main` and on pull requests. **release** runs on
+version tags (below). Both use the shared steps in `.github/workflows/build.yml`.
+
 ### Releasing
 
 Versions follow [Semantic Versioning](https://semver.org): `MAJOR.MINOR.PATCH`.
@@ -271,8 +283,8 @@ share one version. Changes are recorded in [CHANGELOG.md](CHANGELOG.md).
 3. Commit, then tag and push:
    `git tag vX.Y.Z` and `git push origin main vX.Y.Z`.
 
-The workflow builds Windows, macOS and the plugin, checks that the tag matches
-both version numbers and has a changelog section, and publishes a GitHub
+The release workflow checks that the tag matches both version numbers and has
+a changelog section, builds and tests Windows, macOS and the plugin, and publishes a GitHub
 release with the three zips and that section as release notes. A tag like
 `vX.Y.Z-beta.1` is published as a pre-release.
 
