@@ -1,0 +1,8 @@
+build/
+dist/
+mpv-dev/
+*.user
+.vscode/
+.idea/
+*.7z
+*.log

@@ -1,0 +1,374 @@
+/* Stash Native Player – styles for the embedded-player control layer. */
+
+/* Inside the app the page root stays transparent; the page background is
+   painted by html::before, with a hole cut out where the video plays
+   (--snp-hole is set by native-player.js). */
+html.snp-app,
+html.snp-app body {
+  background: transparent !important;
+}
+
+html.snp-app::before {
+  background-color: var(--snp-bg, #202b33);
+  background-image: var(--snp-bg-image, none);
+  clip-path: var(--snp-hole, none);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: fixed;
+  z-index: -1;
+}
+
+.snp-root {
+  outline: none;
+  position: relative;
+  user-select: none;
+}
+
+.snp-root .snp-video {
+  background: #000;
+  cursor: pointer;
+}
+
+.snp-root.snp-started .snp-video {
+  background: transparent !important;
+}
+
+.snp-root.snp-started.snp-idle,
+.snp-root.snp-started.snp-idle .snp-video {
+  cursor: none;
+}
+
+/* Fullscreen: keep everything transparent so the native video shows through. */
+.snp-root:fullscreen {
+  background: transparent !important;
+  height: 100vh;
+  max-height: none;
+  padding: 0;
+  width: 100vw;
+}
+
+.snp-root:fullscreen .snp-video {
+  height: 100% !important;
+  max-height: none !important;
+}
+
+.snp-root::backdrop {
+  background: transparent !important;
+}
+
+/* "Fill window": the player covers the whole app window (but stays below
+   Bootstrap modals, which use z-index 1050). */
+html.snp-fill-active,
+html.snp-fill-active body {
+  overflow: hidden !important;
+}
+
+/* The player is transparent where the video shows, so hide the rest of the
+   page underneath it while filling the window. */
+html.snp-fill-active body * {
+  visibility: hidden !important;
+}
+
+html.snp-fill-active .snp-root,
+html.snp-fill-active .snp-root * {
+  visibility: visible !important;
+}
+
+.snp-root.snp-fill {
+  height: 100vh !important;
+  inset: 0;
+  max-height: none !important;
+  padding: 0 !important;
+  position: fixed !important;
+  width: 100vw !important;
+  z-index: 1045;
+}
+
+.snp-root.snp-fill:not(.snp-started) {
+  background: #000;
+}
+
+.snp-root.snp-fill .snp-video {
+  height: 100% !important;
+  max-height: none !important;
+}
+
+.snp-root.snp-fill .snp-controls {
+  bottom: 0;
+}
+
+.snp-btn.snp-active-btn {
+  color: #48aff0;
+}
+
+/* Poster before playback starts */
+.snp-poster {
+  align-items: center;
+  background-color: #000;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: absolute;
+}
+
+.snp-bigplay {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  font-size: 2rem;
+  height: 5rem;
+  justify-content: center;
+  padding-left: 0.3rem;
+  transition: transform 0.15s, background 0.15s;
+  width: 5rem;
+}
+
+.snp-poster:hover .snp-bigplay {
+  background: rgba(19, 124, 189, 0.85);
+  transform: scale(1.06);
+}
+
+.snp-spinner {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 2.5rem;
+  left: 50%;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.snp-error {
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 0.25rem;
+  color: #f5a5a5;
+  left: 50%;
+  max-width: 80%;
+  padding: 0.75rem 1rem;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Control bar */
+.snp-controls {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0));
+  bottom: 0.25rem;
+  color: #fff;
+  left: 0;
+  padding: 1.5rem 0.75rem 0.4rem;
+  position: absolute;
+  right: 0;
+  transition: opacity 0.25s;
+}
+
+.snp-root:fullscreen .snp-controls {
+  bottom: 0;
+}
+
+.snp-root.snp-idle .snp-controls {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.snp-row {
+  align-items: center;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.snp-spacer {
+  flex: 1;
+}
+
+.snp-btn {
+  background: none;
+  border: 0;
+  border-radius: 0.25rem;
+  color: #fff;
+  font-size: 1.05rem;
+  height: 2.2rem;
+  padding: 0 0.4rem;
+}
+
+.snp-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.snp-btn:focus {
+  outline: none;
+}
+
+.snp-time {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+}
+
+.snp-badge {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 0.2rem;
+  font-size: 0.75rem;
+  padding: 0.05rem 0.35rem;
+}
+
+.snp-volume {
+  align-items: center;
+  display: flex;
+}
+
+.snp-volume input[type="range"] {
+  accent-color: #137cbd;
+  width: 5.5rem;
+}
+
+/* Seek bar */
+.snp-seek {
+  cursor: pointer;
+  height: 1.1rem;
+  margin: 0 0.25rem 0.2rem;
+  position: relative;
+  touch-action: none;
+}
+
+.snp-seek-track {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  height: 4px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: height 0.1s;
+}
+
+.snp-seek:hover .snp-seek-track {
+  height: 7px;
+}
+
+.snp-seek-fill {
+  background: #137cbd;
+  border-radius: 2px;
+  height: 100%;
+}
+
+.snp-seek-thumb {
+  background: #fff;
+  border-radius: 50%;
+  height: 12px;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+}
+
+.snp-marker {
+  background: #f5c542;
+  height: 100%;
+  margin-left: -2px;
+  position: absolute;
+  top: 0;
+  width: 4px;
+}
+
+.snp-marker-range {
+  background: rgba(245, 197, 66, 0.55);
+  margin-left: 0;
+}
+
+.snp-marker:hover {
+  background: #fff;
+}
+
+.snp-preview {
+  align-items: center;
+  bottom: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.snp-preview-img {
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.snp-preview-time {
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 3px;
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
+  padding: 0 0.35rem;
+}
+
+/* Settings menu */
+.snp-menu-anchor {
+  position: relative;
+}
+
+.snp-menu {
+  background: rgba(28, 33, 38, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.3rem;
+  bottom: 2.6rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  max-height: 60vh;
+  min-width: 12rem;
+  overflow-y: auto;
+  padding: 0.3rem 0;
+  position: absolute;
+  right: 0;
+  z-index: 10;
+}
+
+.snp-menu-section + .snp-menu-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 0.3rem;
+  padding-top: 0.3rem;
+}
+
+.snp-menu-title {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.8rem;
+  text-transform: uppercase;
+}
+
+.snp-menu-item {
+  background: none;
+  border: 0;
+  color: #fff;
+  display: block;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.8rem 0.3rem 0.5rem;
+  text-align: left;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.snp-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.snp-menu-check {
+  margin-right: 0.4rem;
+  visibility: hidden;
+}
+
+.snp-menu-item.selected .snp-menu-check {
+  visibility: visible;
+}

@@ -1,0 +1,2 @@
+// Windows resources: the .exe icon (Stash's own icon, from the Stash web UI's favicon.ico).
+IDI_ICON1 ICON "icons/stash.ico"

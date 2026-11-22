@@ -1,0 +1,91 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write # for attaching zips to releases on tags
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.8.3"
+          arch: win64_msvc2022_64
+          modules: qtwebengine qtwebchannel qtpositioning
+          cache: true
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      # libmpv (DLL + headers) from shinchiro's Windows builds of mpv
+      - name: Download libmpv
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $rel = Invoke-RestMethod -Headers @{ Authorization = "Bearer $env:GH_TOKEN" } `
+            https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest
+          $asset = $rel.assets | Where-Object { $_.name -match '^mpv-dev-x86_64-\d{8}-git-[0-9a-f]+\.7z$' } | Select-Object -First 1
+          if (-not $asset) { throw "No mpv-dev-x86_64 asset found in $($rel.tag_name)" }
+          Write-Host "Using $($asset.name)"
+          Invoke-WebRequest $asset.browser_download_url -OutFile mpv-dev.7z
+          7z x mpv-dev.7z -ompv-dev | Out-Null
+          Get-ChildItem mpv-dev
+
+      - name: Configure
+        run: cmake -S app -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMPV_INCLUDE_DIR="${{ github.workspace }}/mpv-dev/include"
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $dist = "dist/StashNativePlayer"
+          New-Item -ItemType Directory -Force $dist | Out-Null
+          Copy-Item build/StashNativePlayer.exe $dist/
+          windeployqt --release --qmldir app/qml --no-translations $dist/StashNativePlayer.exe
+          $mpvDll = Get-ChildItem mpv-dev -Recurse -Filter "libmpv-2.dll" | Select-Object -First 1
+          if (-not $mpvDll) { throw "libmpv-2.dll not found in mpv-dev" }
+          Copy-Item $mpvDll.FullName $dist/
+          Copy-Item README.md $dist/
+          Compress-Archive -Path $dist -DestinationPath dist/StashNativePlayer-windows-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StashNativePlayer-windows-x64
+          path: dist/StashNativePlayer
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/StashNativePlayer-windows-x64.zip
+
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check plugin script
+        run: node --check plugin/StashNativePlayer/native-player.js
+      - name: Zip plugin
+        run: cd plugin && zip -r ../StashNativePlayer-plugin.zip StashNativePlayer
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StashNativePlayer-plugin
+          path: plugin/StashNativePlayer
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: StashNativePlayer-plugin.zip
