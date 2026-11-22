@@ -46,6 +46,18 @@ int freePort()
     return s.serverPort();
 }
 
+// A helper tool: <aiDir>/<folder>/<name>[.exe] if bundled there, else from PATH
+// (e.g. Homebrew's ffmpeg / whisper-cpp / llama.cpp on macOS).
+QString toolPath(const QString &aiDir, const QString &folder, const QString &name)
+{
+#ifdef Q_OS_WIN
+    const QString bundled = aiDir + QLatin1Char('/') + folder + QLatin1Char('/') + name + QStringLiteral(".exe");
+#else
+    const QString bundled = aiDir + QLatin1Char('/') + folder + QLatin1Char('/') + name;
+#endif
+    return QFileInfo::exists(bundled) ? bundled : QStandardPaths::findExecutable(name);
+}
+
 void hideConsole(QProcess *p)
 {
 #ifdef Q_OS_WIN
@@ -200,8 +212,7 @@ void LiveSubs::stopServersIfIdle()
 
 QString LiveSubs::ffmpegPath() const
 {
-    const QString bundled = m_aiDir + QStringLiteral("/ffmpeg/ffmpeg.exe");
-    return QFileInfo::exists(bundled) ? bundled : QStandardPaths::findExecutable(QStringLiteral("ffmpeg"));
+    return toolPath(m_aiDir, QStringLiteral("ffmpeg"), QStringLiteral("ffmpeg"));
 }
 
 // --- models ------------------------------------------------------------------------
@@ -314,7 +325,7 @@ QString LiveSubs::llmPath(bool live) const
 
 bool LiveSubs::llamaExeExists() const
 {
-    return QFileInfo::exists(m_aiDir + QStringLiteral("/llama/llama-server.exe"));
+    return !toolPath(m_aiDir, QStringLiteral("llama"), QStringLiteral("llama-server")).isEmpty();
 }
 
 // --- servers ------------------------------------------------------------------------
@@ -340,9 +351,9 @@ void LiveSubs::watchReady()
 
 bool LiveSubs::startWhisper()
 {
-    const QString whisperExe = m_aiDir + QStringLiteral("/whisper/whisper-server.exe");
+    const QString whisperExe = toolPath(m_aiDir, QStringLiteral("whisper"), QStringLiteral("whisper-server"));
     const QString whisperModel = whisperPath();
-    if (!QFileInfo::exists(whisperExe) || whisperModel.isEmpty()) {
+    if (whisperExe.isEmpty() || whisperModel.isEmpty()) {
         setStatus(tr("Subtitles need whisper-server.exe in %1 and a ggml-*.bin model in %2")
                       .arg(QDir::toNativeSeparators(m_aiDir + QStringLiteral("/whisper")),
                            QDir::toNativeSeparators(m_modelsDir)));
@@ -372,7 +383,7 @@ void LiveSubs::startLlama(const QString &model)
     ++m_llamaRun;
     m_llamaPort = freePort();
     debugLog(QStringLiteral("start llama-server: ") + model);
-    startServer(m_llama, m_aiDir + QStringLiteral("/llama/llama-server.exe"),
+    startServer(m_llama, toolPath(m_aiDir, QStringLiteral("llama"), QStringLiteral("llama-server")),
                 {QStringLiteral("-m"), model, QStringLiteral("--host"), QStringLiteral("127.0.0.1"),
                  QStringLiteral("--port"), QString::number(m_llamaPort), QStringLiteral("-ngl"),
                  QStringLiteral("99"), QStringLiteral("-c"), QStringLiteral("4096"), QStringLiteral("-np"),

@@ -1,5 +1,10 @@
 name: build
 
+# Every push to main and every pull request builds Windows + macOS + the plugin.
+# Pushing a version tag (vX.Y.Z, matching the version in app/CMakeLists.txt)
+# also publishes a GitHub release with those builds attached and the matching
+# CHANGELOG.md section as release notes. See "Releasing" in README.md.
+
 on:
   push:
     branches: [main]
@@ -8,7 +13,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write # for attaching zips to releases on tags
+  contents: read
 
 jobs:
   windows:
@@ -40,7 +45,6 @@ jobs:
           Write-Host "Using $($asset.name)"
           Invoke-WebRequest $asset.browser_download_url -OutFile mpv-dev.7z
           7z x mpv-dev.7z -ompv-dev | Out-Null
-          Get-ChildItem mpv-dev
 
       - name: Configure
         run: cmake -S app -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMPV_INCLUDE_DIR="${{ github.workspace }}/mpv-dev/include"
@@ -58,34 +62,132 @@ jobs:
           $mpvDll = Get-ChildItem mpv-dev -Recurse -Filter "libmpv-2.dll" | Select-Object -First 1
           if (-not $mpvDll) { throw "libmpv-2.dll not found in mpv-dev" }
           Copy-Item $mpvDll.FullName $dist/
-          Copy-Item README.md $dist/
+          Copy-Item README.md, CHANGELOG.md $dist/
           Compress-Archive -Path $dist -DestinationPath dist/StashNativePlayer-windows-x64.zip
 
       - uses: actions/upload-artifact@v4
         with:
           name: StashNativePlayer-windows-x64
-          path: dist/StashNativePlayer
+          path: dist/StashNativePlayer-windows-x64.zip
+          compression-level: 0
 
-      - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+  macos:
+    runs-on: macos-14 # Apple Silicon (arm64)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
         with:
-          files: dist/StashNativePlayer-windows-x64.zip
+          version: "6.8.3"
+          arch: clang_64
+          modules: qtwebengine qtwebchannel qtpositioning
+          cache: true
+
+      # libmpv (+ headers) and its dependencies from Homebrew; dylibbundler
+      # copies them into the app bundle.
+      - name: Install libmpv
+        run: brew install ninja mpv dylibbundler
+
+      - name: Configure
+        run: >
+          cmake -S app -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_OSX_ARCHITECTURES=arm64
+          -DMPV_INCLUDE_DIR="$(brew --prefix)/include"
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          app=build/StashNativePlayer.app
+          macdeployqt "$app" -qmldir=app/qml
+          fw="$app/Contents/Frameworks"
+          mkdir -p "$fw"
+          cp "$(brew --prefix)/lib/libmpv.2.dylib" "$fw/"
+          chmod u+w "$fw/libmpv.2.dylib"
+          install_name_tool -id @rpath/libmpv.2.dylib "$fw/libmpv.2.dylib"
+          dylibbundler -of -b -x "$fw/libmpv.2.dylib" -d "$fw" -p @executable_path/../Frameworks/
+          # nothing in the bundle may still point into Homebrew
+          if otool -L "$fw"/*.dylib | grep -E "^\s+$(brew --prefix)/"; then
+            echo "Homebrew paths left in bundled libraries" >&2; exit 1
+          fi
+          # ad-hoc signature (required on Apple Silicon; not notarized)
+          codesign --force --deep --sign - "$app"
+          codesign --verify --deep "$app"
+          mkdir -p dist
+          ditto -c -k --keepParent "$app" dist/StashNativePlayer-macos-arm64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StashNativePlayer-macos-arm64
+          path: dist/StashNativePlayer-macos-arm64.zip
+          compression-level: 0
 
   plugin:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check plugin script
-        run: node --check plugin/StashNativePlayer/native-player.js
+      - name: Check plugin scripts
+        run: |
+          node --check plugin/StashNativePlayer/native-player.js
+          python3 -m py_compile plugin/StashNativePlayer/snp_captions.py
       - name: Zip plugin
-        run: cd plugin && zip -r ../StashNativePlayer-plugin.zip StashNativePlayer
+        run: cd plugin && zip -r ../StashNativePlayer-plugin.zip StashNativePlayer -x '*/__pycache__/*'
       - uses: actions/upload-artifact@v4
         with:
           name: StashNativePlayer-plugin
-          path: plugin/StashNativePlayer
-      - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+          path: StashNativePlayer-plugin.zip
+          compression-level: 0
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, macos, plugin]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check version and extract release notes
+        id: notes
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"                 # e.g. v1.2.3 or v1.2.3-beta.1
+          version="${tag#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag $tag is not a semantic version (vMAJOR.MINOR.PATCH[-prerelease])"; exit 1
+          fi
+          core="${version%%-*}"
+          cmake_version=$(sed -nE 's/^project\(StashNativePlayer VERSION ([0-9.]+).*/\1/p' app/CMakeLists.txt)
+          plugin_version=$(sed -nE 's/^version: *([0-9.]+).*/\1/p' plugin/StashNativePlayer/StashNativePlayer.yml)
+          if [ "$core" != "$cmake_version" ] || [ "$core" != "$plugin_version" ]; then
+            echo "::error::Tag $tag does not match app/CMakeLists.txt ($cmake_version) and StashNativePlayer.yml ($plugin_version)"; exit 1
+          fi
+          # the "## [x.y.z]" section of CHANGELOG.md, up to the next "## [" heading
+          awk -v v="$core" '
+            index($0, "## [" v "]") == 1 { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::CHANGELOG.md has no section for [$core]"; exit 1
+          fi
+          if [[ "$version" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/download-artifact@v4
         with:
-          files: StashNativePlayer-plugin.zip
+          path: artifacts
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body_path: notes.md
+          prerelease: ${{ steps.notes.outputs.prerelease }}
+          files: |
+            artifacts/StashNativePlayer-windows-x64.zip
+            artifacts/StashNativePlayer-macos-arm64.zip
+            artifacts/StashNativePlayer-plugin.zip
+          fail_on_unmatched_files: true

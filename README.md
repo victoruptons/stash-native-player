@@ -62,9 +62,20 @@ without it.
 
 ### 2. App (on the computer you watch on)
 
-Windows: download `StashNativePlayer-windows-x64` from the latest GitHub
-Actions run (or a release), unzip, and run `StashNativePlayer.exe`. On first
-start, enter your Stash address (e.g. `http://192.168.1.10:9999`).
+Download the zip for your system from the
+[latest release](https://github.com/victoruptons/stash-native-player/releases/latest) (or from a GitHub Actions run):
+
+- **Windows:** `StashNativePlayer-windows-x64.zip`. Unzip it and run
+  `StashNativePlayer.exe`.
+- **macOS (Apple Silicon):** `StashNativePlayer-macos-arm64.zip`. Unzip it and
+  move `StashNativePlayer.app` to Applications. The app isn't notarized, so the
+  first time, right-click it → **Open** (or run
+  `xattr -dr com.apple.quarantine /Applications/StashNativePlayer.app`). The
+  macOS build is new and not yet tested on a real Mac. Subtitles there need
+  `ffmpeg`, `whisper-cpp` and `llama.cpp` from Homebrew; burned-in subtitle
+  detection is Windows-only.
+
+On first start, enter your Stash address (e.g. `http://192.168.1.10:9999`).
 
 To switch servers later, click the address on the right of the toolbar: it
 lists recently used servers and has "Other address…". Starting the app with
@@ -238,8 +249,32 @@ copy C:\path\to\mpv-dev\libmpv-2.dll build\
 The GitHub Actions workflow in `.github/workflows/build.yml` does all of this
 and uploads a ready-to-run folder.
 
+macOS: install Qt 6.8 (with the same modules) and `brew install mpv`, then
+`cmake -S app -B build -G Ninja -DCMAKE_BUILD_TYPE=Release` and
+`cmake --build build`. The workflow's `macos` job shows how the libmpv
+dylibs are bundled into the `.app`.
+
 Linux (for development): install Qt 6 WebEngine dev packages and `libmpv-dev`,
 then `cmake -S app -B build && cmake --build build`.
+
+### Releasing
+
+Versions follow [Semantic Versioning](https://semver.org): `MAJOR.MINOR.PATCH`.
+Bump MINOR for new features, PATCH for fixes, MAJOR for breaking changes (for
+example a plugin that no longer works with older apps). The app and the plugin
+share one version. Changes are recorded in [CHANGELOG.md](CHANGELOG.md).
+
+1. Move the items under `## [Unreleased]` in `CHANGELOG.md` into a new
+   `## [X.Y.Z]` section.
+2. Set the same version in `app/CMakeLists.txt` (`project(... VERSION X.Y.Z)`)
+   and `plugin/StashNativePlayer/StashNativePlayer.yml` (`version:`).
+3. Commit, then tag and push:
+   `git tag vX.Y.Z` and `git push origin main vX.Y.Z`.
+
+The workflow builds Windows, macOS and the plugin, checks that the tag matches
+both version numbers and has a changelog section, and publishes a GitHub
+release with the three zips and that section as release notes. A tag like
+`vX.Y.Z-beta.1` is published as a pre-release.
 
 ### Troubleshooting environment variables
 
