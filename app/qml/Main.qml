@@ -448,6 +448,23 @@ ApplicationWindow {
         }
     }
 
+    // macOS trackpad swipes between pages (winframe_mac.mm). dir: 1 = back,
+    // -1 = forward; (x, y) is where the gesture started, in window coordinates.
+    function canSwipe(x, y, dir) {
+        if (win.setupVisible || win.fullScreen || !web.visible || y < web.y)
+            return false;
+        // not over the video: there the trackpad belongs to the player
+        if (video.visible && x >= video.x && x < video.x + video.width && y >= video.y && y < video.y + video.height)
+            return false;
+        return dir > 0 ? web.canGoBack : web.canGoForward;
+    }
+    function swipeNavigate(dir) {
+        if (dir > 0)
+            web.goBack();
+        else
+            web.goForward();
+    }
+
     function connectTo(address) {
         if (!app.setServer(address))
             return false;

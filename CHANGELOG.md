@@ -8,6 +8,13 @@ The app and the plugin share one version number.
 
 ## [Unreleased]
 
+### Added
+
+- macOS: trackpad swipes go back / forward between pages, following System
+  Settings > Trackpad > "Swipe between pages" (two-finger swipes tracked like
+  Safari, or three-finger swipes). Swipes over the video are left to the
+  player.
+
 ## [0.1.1] - 2026-11-22
 
 ### Fixed
