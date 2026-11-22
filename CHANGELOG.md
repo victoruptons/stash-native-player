@@ -8,6 +8,8 @@ The app and the plugin share one version number.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-22
+
 ### Fixed
 
 - macOS: the window uses the standard traffic-light buttons on the left
