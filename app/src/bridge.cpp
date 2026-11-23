@@ -98,6 +98,7 @@ void Bridge::load(const QString &urlString, double startSeconds, bool paused)
                                cookies.isEmpty() ? QStringList{} : QStringList{QStringLiteral("Cookie: ") + cookies});
     m_player->setPropertyValue(QStringLiteral("start"),
                                startSeconds > 0 ? QString::number(startSeconds, 'f', 3) : QStringLiteral("none"));
+    m_wantPaused = paused;
     m_player->setPropertyValue(QStringLiteral("pause"), paused);
     m_player->command({QStringLiteral("loadfile"), url.toString(QUrl::FullyEncoded), QStringLiteral("replace")});
     if (m_liveSubs)
@@ -121,6 +122,7 @@ void Bridge::stop()
 
 void Bridge::setPaused(bool paused)
 {
+    m_wantPaused = paused;
     if (m_player)
         m_player->setPropertyValue(QStringLiteral("pause"), paused);
 }
@@ -206,8 +208,16 @@ void Bridge::setVideoGeometry(double x, double y, double width, double height, b
 void Bridge::onFileLoaded()
 {
     m_loaded = true;
-    if (m_player)
+    if (m_player) {
         m_player->setPropertyValue(QStringLiteral("start"), QStringLiteral("none"));
+        // While the previous file sits at its end (keep-open), mpv holds
+        // pause=yes and ignores pause=no without a property-change event, so
+        // the unpause load() sent may not have taken effect and the page would
+        // show "playing" while mpv stays paused. Apply it again now that the
+        // new file is loaded; if it changes anything, the "pause" observer
+        // reports it.
+        m_player->setPropertyValue(QStringLiteral("pause"), m_wantPaused);
+    }
     const auto subs = m_pendingSubs;
     m_pendingSubs.clear();
     for (const QVariantList &s : subs)

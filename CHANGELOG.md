@@ -12,6 +12,11 @@ The app and the plugin share one version number.
 
 - In fill-window mode the settings menu showed a check mark next to every
   speed / audio / subtitle choice instead of only the selected one.
+- Opening another video after the previous one had played to the end could
+  leave the player paused while the play/pause button showed "Pause"; the
+  button then did nothing visible. (mpv ignores an unpause while a finished
+  file is still open, so the new video never started. Seen with mpv 0.42 on
+  macOS.)
 
 ## [0.2.0] - 2026-11-22
 

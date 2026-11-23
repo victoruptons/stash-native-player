@@ -81,6 +81,9 @@ private:
     QElapsedTimer m_positionTimer;
     bool m_loaded = false;
     bool m_eofSent = false;
+    // Last pause state the page asked for; re-applied once a file has loaded
+    // (see onFileLoaded).
+    bool m_wantPaused = true;
     QList<QVariantList> m_pendingSubs; // [url, title, lang, select]
 
     struct Cookie {
