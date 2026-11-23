@@ -2,7 +2,7 @@ name: Stash Native Player
 description: >-
   Plays scenes with an embedded native (mpv) player when Stash is opened in the
   Stash Native Player desktop app. In a normal browser the stock player is used.
-version: 0.2.0
+version: 0.2.1
 ui:
   javascript:
     - native-player.js

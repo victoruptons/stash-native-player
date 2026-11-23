@@ -8,6 +8,8 @@ The app and the plugin share one version number.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-22
+
 ### Fixed
 
 - In fill-window mode the settings menu showed a check mark next to every
