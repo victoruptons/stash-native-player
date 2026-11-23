@@ -48,9 +48,10 @@ cmake --build build
   `ditto`. Check it uses the bundled libmpv:
   `vmmap <pid> | grep libmpv` must show `.../Contents/Frameworks/libmpv.2.dylib`,
   not `/opt/homebrew/...`.
-- dyld on macOS 15.4+ refuses dylibs with a duplicate `LC_RPATH`, and
-  dylibbundler adds one to libmpv; `build.yml` removes it and fails the build
-  if any is left.
+- dylibbundler adds a duplicate `LC_RPATH` to libmpv. dyld rejects that only
+  for dylibs built for macOS 26+ (minos 26.0 — e.g. Homebrew bottles on this
+  Mac); CI's macos-15 libmpv (minos 15.0) loads anyway. `build.yml` removes
+  duplicates and fails the build if any is left (since v0.2.2).
 - Windows builds: see the `windows` job in the same workflow (shinchiro libmpv).
 
 ## Tests

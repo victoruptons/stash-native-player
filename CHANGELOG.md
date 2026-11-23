@@ -12,9 +12,11 @@ The app and the plugin share one version number.
 
 ### Fixed
 
-- macOS: the libmpv bundled in the app could not be loaded on macOS 15.4 and
-  later (duplicate `LC_RPATH`), so the app fell back to Homebrew's mpv, or had
-  no video player at all on Macs without it.
+- macOS packaging: the bundled libmpv had a duplicate `LC_RPATH`. Released
+  builds were not affected (their libmpv targets macOS 15, where dyld accepts
+  it), but a libmpv built for macOS 26 fails to load with it, and the app then
+  falls back to Homebrew's mpv or has no player. The build now removes the
+  duplicate.
 
 ## [0.2.1] - 2026-11-22
 

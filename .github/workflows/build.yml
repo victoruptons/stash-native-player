@@ -123,9 +123,10 @@ jobs:
           chmod u+w "$fw/libmpv.2.dylib"
           install_name_tool -id @rpath/libmpv.2.dylib "$fw/libmpv.2.dylib"
           dylibbundler -of -b -x "$fw/libmpv.2.dylib" -d "$fw" -p @executable_path/../Frameworks/
-          # dylibbundler adds its rpath to libmpv a second time; since macOS
-          # 15.4 dyld refuses to load a library with a duplicate LC_RPATH, and
-          # the app would silently fall back to (or lack) Homebrew's libmpv.
+          # dylibbundler adds its rpath to libmpv a second time. dyld refuses
+          # to load a library with a duplicate LC_RPATH when it was built for
+          # macOS 26 or later (minos 26), and the app would then silently fall
+          # back to (or lack) Homebrew's libmpv.
           rpaths() { otool -l "$1" | awk '/LC_RPATH/ { getline; getline; print $2 }'; }
           for f in "$fw"/*.dylib; do
             for p in $(rpaths "$f" | sort | uniq -d); do
