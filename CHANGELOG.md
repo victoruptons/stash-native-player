@@ -8,6 +8,10 @@ The app and the plugin share one version number.
 
 ## [Unreleased]
 
+### Fixed
+
+- macOS: Cmd+W closes the window.
+
 ## [0.2.2] - 2026-11-22
 
 ### Fixed

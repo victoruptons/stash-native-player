@@ -699,6 +699,10 @@ ApplicationWindow {
     Shortcut { sequences: [StandardKey.ZoomIn, "Ctrl+="]; onActivated: app.zoomFactor = app.zoomFactor + 0.1 }
     Shortcut { sequences: [StandardKey.ZoomOut]; onActivated: app.zoomFactor = app.zoomFactor - 0.1 }
     Shortcut { sequences: ["Ctrl+0"]; onActivated: app.zoomFactor = 1.0 }
+    // macOS: Cmd+W closes the window (there is no File menu to provide it).
+    // "Ctrl" is Cmd on macOS. Not on Windows, where Ctrl+W is not expected
+    // to close an app's only window.
+    Shortcut { sequences: [StandardKey.Close]; enabled: win.mac; onActivated: win.close() }
     Shortcut {
         sequences: [StandardKey.FullScreen, "F11"]
         onActivated: {
