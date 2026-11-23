@@ -123,6 +123,22 @@ jobs:
           chmod u+w "$fw/libmpv.2.dylib"
           install_name_tool -id @rpath/libmpv.2.dylib "$fw/libmpv.2.dylib"
           dylibbundler -of -b -x "$fw/libmpv.2.dylib" -d "$fw" -p @executable_path/../Frameworks/
+          # dylibbundler adds its rpath to libmpv a second time; since macOS
+          # 15.4 dyld refuses to load a library with a duplicate LC_RPATH, and
+          # the app would silently fall back to (or lack) Homebrew's libmpv.
+          rpaths() { otool -l "$1" | awk '/LC_RPATH/ { getline; getline; print $2 }'; }
+          for f in "$fw"/*.dylib; do
+            for p in $(rpaths "$f" | sort | uniq -d); do
+              while [ "$(rpaths "$f" | grep -cxF "$p")" -gt 1 ]; do
+                install_name_tool -delete_rpath "$p" "$f"
+              done
+            done
+          done
+          for f in "$fw"/*.dylib; do
+            if [ -n "$(rpaths "$f" | sort | uniq -d)" ]; then
+              echo "duplicate LC_RPATH left in $f" >&2; exit 1
+            fi
+          done
           # nothing in the bundle may still point into Homebrew
           if otool -L "$fw"/*.dylib | grep -E "^\s+$(brew --prefix)/"; then
             echo "Homebrew paths left in bundled libraries" >&2; exit 1

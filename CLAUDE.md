@@ -39,8 +39,18 @@ cmake --build build
   `FindWrapOpenGL.cmake.orig`). CI uses macos-15 and is unaffected. Reinstalling
   Qt brings the error back (`ld: framework 'AGL' not found`).
 - The dev build loads libmpv from `/opt/homebrew/lib/libmpv.2.dylib`
-  (`app/src/mpvlib.cpp`); packaging (macdeployqt + dylibbundler + ad-hoc
-  codesign) is only in CI.
+  (`app/src/mpvlib.cpp`, which tries `Contents/Frameworks` first and then
+  Homebrew, silently).
+- Local packaged build (same as the CI `Package` step): Release build in
+  `build-release/`, then with `~/Qt/6.8.3/macos/bin` on PATH run
+  `macdeployqt`, copy + `dylibbundler` libmpv, remove duplicate `LC_RPATH`s,
+  ad-hoc `codesign --force --deep --sign -`. Copy to `/Applications` with
+  `ditto`. Check it uses the bundled libmpv:
+  `vmmap <pid> | grep libmpv` must show `.../Contents/Frameworks/libmpv.2.dylib`,
+  not `/opt/homebrew/...`.
+- dyld on macOS 15.4+ refuses dylibs with a duplicate `LC_RPATH`, and
+  dylibbundler adds one to libmpv; `build.yml` removes it and fails the build
+  if any is left.
 - Windows builds: see the `windows` job in the same workflow (shinchiro libmpv).
 
 ## Tests

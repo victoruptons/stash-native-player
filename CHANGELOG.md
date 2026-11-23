@@ -8,6 +8,12 @@ The app and the plugin share one version number.
 
 ## [Unreleased]
 
+### Fixed
+
+- macOS: the libmpv bundled in the app could not be loaded on macOS 15.4 and
+  later (duplicate `LC_RPATH`), so the app fell back to Homebrew's mpv, or had
+  no video player at all on Macs without it.
+
 ## [0.2.1] - 2026-11-22
 
 ### Fixed

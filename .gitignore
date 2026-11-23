@@ -8,3 +8,4 @@ mpv-dev/
 *.log
 build-tests/
 __pycache__/
+build-release/
