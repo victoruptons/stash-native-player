@@ -8,6 +8,11 @@ The app and the plugin share one version number.
 
 ## [Unreleased]
 
+### Fixed
+
+- In fill-window mode the settings menu showed a check mark next to every
+  speed / audio / subtitle choice instead of only the selected one.
+
 ## [0.2.0] - 2026-11-22
 
 ### Added

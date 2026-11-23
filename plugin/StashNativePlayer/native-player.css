@@ -364,11 +364,13 @@ html.snp-fill-active .snp-root * {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* opacity, not visibility: fill-window mode forces visibility: visible on
+   everything inside the player (see html.snp-fill-active above). */
 .snp-menu-check {
   margin-right: 0.4rem;
-  visibility: hidden;
+  opacity: 0;
 }
 
 .snp-menu-item.selected .snp-menu-check {
-  visibility: visible;
+  opacity: 1;
 }
