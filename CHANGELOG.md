@@ -8,6 +8,8 @@ The app and the plugin share one version number.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-22
+
 ### Fixed
 
 - macOS: the libmpv bundled in the app could not be loaded on macOS 15.4 and
