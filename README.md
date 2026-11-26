@@ -106,8 +106,11 @@ toolbar space to move the window and double-click it to maximize. Windows
 Snap (drag to a screen edge) and PowerToys FancyZones (`Shift`-drag) work
 when dragging by the toolbar.
 
-App shortcuts: `Ctrl+Shift+S` change server, `Ctrl+Shift+L` live subtitles, `F5`/`Ctrl+R` reload,
-`Alt+←/→` back/forward, `Ctrl +/-/0` zoom, `F11` fullscreen.
+App shortcuts work like a browser's: `Alt+←/→` (macOS `Cmd+[` / `Cmd+]`) or the mouse's
+back / forward buttons go back / forward, `F5`/`Ctrl+R` reload, `Ctrl+Shift+R`/`Shift+F5` reload
+without the cache, `Alt+Home` the server's home page, `Ctrl+F` find in page (`Enter` / `Shift+Enter` or
+`F3` / `Shift+F3` next / previous, `Esc` closes), `Ctrl +/-/0` zoom, `F11` fullscreen. Also
+`Ctrl+Shift+S` change server and `Ctrl+Shift+L` live subtitles. On macOS use `Cmd` for `Ctrl`.
 
 ### Live subtitles (字幕)
 

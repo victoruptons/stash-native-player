@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.Basic as Basic
 import QtQuick.Dialogs
 import QtQuick.Layouts
 import QtQuick.Window
@@ -528,6 +529,11 @@ ApplicationWindow {
                 loadError = "";
         }
 
+        onFindTextFinished: function(result) {
+            findBar.matches = result.numberOfMatches;
+            findBar.current = result.activeMatch;
+        }
+
         onRenderProcessTerminated: function(status, code) {
             reloadTimer.start();
         }
@@ -689,13 +695,87 @@ ApplicationWindow {
         anchors { right: parent.right; bottom: parent.bottom }
         width: win.grip * 2; height: win.grip * 2 }
 
+    // --- find in page (Ctrl+F) -------------------------------------------------
+    Rectangle {
+        id: findBar
+        visible: false
+        z: 11
+        anchors { top: toolbar.bottom; right: parent.right; topMargin: 6; rightMargin: 16 }
+        width: 340; height: 40
+        radius: 4
+        color: "#182026"
+        border.color: "#394b59"
+
+        property int matches: 0
+        property int current: 0
+
+        function open() {
+            visible = true;
+            findField.forceActiveFocus();
+            findField.selectAll();
+            if (findField.text !== "")
+                web.findText(findField.text);
+        }
+        function close() {
+            visible = false;
+            web.findText("");
+            matches = 0;
+            web.forceActiveFocus();
+        }
+        function next(backward) {
+            if (!visible)
+                open();
+            else if (findField.text !== "")
+                web.findText(findField.text, backward ? WebEngineView.FindBackward : 0);
+        }
+
+        RowLayout {
+            anchors { fill: parent; leftMargin: 8; rightMargin: 4 }
+            spacing: 2
+            // Basic style: the native Windows style ignores a custom background
+            Basic.TextField {
+                id: findField
+                Layout.fillWidth: true
+                placeholderText: "Find in page"
+                color: "white"
+                selectByMouse: true
+                placeholderTextColor: "#738694"
+                selectionColor: "#2b95d6"
+                selectedTextColor: "white"
+                background: Rectangle { color: "#10161a"; radius: 3; border.color: findField.activeFocus ? "#2b95d6" : "#394b59" }
+                onTextChanged: web.findText(text)
+                Keys.onReturnPressed: (event) => findBar.next(event.modifiers & Qt.ShiftModifier)
+                Keys.onEnterPressed: (event) => findBar.next(event.modifiers & Qt.ShiftModifier)
+                Keys.onEscapePressed: findBar.close()
+            }
+            Label {
+                visible: findField.text !== ""
+                text: findBar.matches > 0 ? findBar.current + "/" + findBar.matches : "0/0"
+                color: findBar.matches > 0 ? "#a7b6c2" : "#ff7373"
+                font.pixelSize: 12
+            }
+            ToolButton { text: "↑"; implicitWidth: 28; onClicked: findBar.next(true)
+                ToolTip.visible: hovered; ToolTip.text: "Previous (Shift+Enter)" }
+            ToolButton { text: "↓"; implicitWidth: 28; onClicked: findBar.next(false)
+                ToolTip.visible: hovered; ToolTip.text: "Next (Enter)" }
+            ToolButton { text: "✕"; implicitWidth: 28; onClicked: findBar.close()
+                ToolTip.visible: hovered; ToolTip.text: "Close (Esc)" }
+        }
+    }
+
     // --- shortcuts ----------------------------------------------------------
     Shortcut { sequences: ["Ctrl+Shift+S"]; onActivated: win.setupVisible = true }
     Shortcut { sequences: ["Ctrl+Shift+L"]; onActivated: app.liveSubs.mode = (app.liveSubs.mode + 1) % 4 }
     Shortcut { sequences: [StandardKey.Refresh]; onActivated: web.reload() }
     Shortcut { sequences: ["Ctrl+R"]; onActivated: web.reload() }
-    Shortcut { sequences: [StandardKey.Back, "Alt+Left"]; onActivated: web.goBack() }
-    Shortcut { sequences: [StandardKey.Forward, "Alt+Right"]; onActivated: web.goForward() }
+    Shortcut { sequences: ["Ctrl+Shift+R", "Shift+F5"]; onActivated: web.reloadAndBypassCache() }
+    Shortcut { sequences: ["Alt+Home"]; onActivated: web.url = app.serverUrl }
+    Shortcut { sequences: [StandardKey.Find]; enabled: app.hasServer && !win.setupVisible; onActivated: findBar.open() }
+    Shortcut { sequences: [StandardKey.FindNext]; enabled: app.hasServer && !win.setupVisible; onActivated: findBar.next(false) }
+    Shortcut { sequences: [StandardKey.FindPrevious]; enabled: app.hasServer && !win.setupVisible; onActivated: findBar.next(true) }
+    Shortcut { sequences: ["Esc"]; enabled: findBar.visible; onActivated: findBar.close() }
+    Shortcut { sequences: [StandardKey.Back]; onActivated: web.goBack() }
+    Shortcut { sequences: [StandardKey.Forward]; onActivated: web.goForward() }
     Shortcut { sequences: [StandardKey.ZoomIn, "Ctrl+="]; onActivated: app.zoomFactor = app.zoomFactor + 0.1 }
     Shortcut { sequences: [StandardKey.ZoomOut]; onActivated: app.zoomFactor = app.zoomFactor - 0.1 }
     Shortcut { sequences: ["Ctrl+0"]; onActivated: app.zoomFactor = 1.0 }

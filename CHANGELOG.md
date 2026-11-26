@@ -8,8 +8,16 @@ The app and the plugin share one version number.
 
 ## [Unreleased]
 
+### Added
+
+- Find in page (`Ctrl+F` / `Cmd+F`) with next / previous and a match count.
+- `Ctrl+Shift+R` / `Shift+F5` reload without the cache, `Alt+Home` goes to the
+  server's home page.
+
 ### Fixed
 
+- `Alt+←` / `Alt+→` (back / forward) did nothing on Windows: the key was listed
+  twice in the shortcut, which Qt treats as ambiguous.
 - macOS: Cmd+W closes the window.
 
 ## [0.2.2] - 2026-11-22
