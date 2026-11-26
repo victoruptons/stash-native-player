@@ -8,6 +8,8 @@ The app and the plugin share one version number.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-26
+
 ### Added
 
 - Find in page (`Ctrl+F` / `Cmd+F`) with next / previous and a match count.
